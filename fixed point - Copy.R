@@ -1,51 +1,39 @@
-fixed_point <- function(g, x0, tol = 1e-5, max_iter = 100) {
-  x_lama <- x0
+newton_raphson <- function(f, df, x0, tol = 1e-5, max_iter = 100) {
+  x <- x0
   
-  # Cek awal: x0 harus angka yang valid
-  if (!is.finite(x_lama)) {
-    cat("Error: x0 tidak valid!\n")
-    return(NULL)
-  }
-  
-  cat(sprintf("%-6s %-15s %-15s\n", "Iter", "x_baru", "|selisih|"))
-  cat("------------------------------------------\n")
+  cat(sprintf("%-6s %-15s %-15s %-15s\n", "Iter", "x_baru", "f(x)", "|selisih|"))
+  cat("--------------------------------------------------------\n")
   
   for (i in 1:max_iter) {
-    x_baru <- g(x_lama)
+    fx <- f(x)
+    dfx <- df(x)
     
-    # Pengaman: kalau g(x) error / Inf / NA langsung berhenti
-    if (!is.finite(x_baru)) {
-      cat(sprintf("Berhenti di iterasi %d: g(x) = %s (tidak valid)\n", i, x_baru))
+    # Pengaman: kalau turunan hampir nol, jangan dibagi!
+    if (!is.finite(fx) || !is.finite(dfx) || abs(dfx) < 1e-12) {
+      cat("Turunan nol / tidak valid, proses dihentikan! Coba x0 lain.\n")
       return(NULL)
     }
     
-    selisih <- abs(x_baru - x_lama)
-    cat(sprintf("%-6d %-15.6f %-15.6f\n", i, x_baru, selisih))
+    x_baru <- x - fx / dfx
+    selisih <- abs(x_baru - x)
     
-    # Kriteria berhenti yang benar
+    cat(sprintf("%-6d %-15.6f %-15.6f %-15.6f\n", i, x_baru, fx, selisih))
+    
     if (selisih < tol) {
-      cat("------------------------------------------\n")
       return(list(akar = x_baru, iterasi = i, konvergen = TRUE))
     }
-    
-    x_lama <- x_baru
+    x <- x_baru
   }
   
-  cat("------------------------------------------\n")
-  cat("PERINGATAN: Maksimum iterasi tercapai, TIDAK konvergen!\n")
-  cat("Cek lagi g(x) kamu, syaratnya |g'(x)| < 1 di dekat akar.\n")
-  return(list(akar = x_lama, iterasi = max_iter, konvergen = FALSE))
+  cat("PERINGATAN: Tidak konvergen sampai 100 iterasi!\n")
+  return(list(akar = x, iterasi = max_iter, konvergen = FALSE))
 }
 
-# === CONTOH YANG BENAR DAN PASTI KONVERGEN ===
-# Soal: x^2 - 4 = 0, akar = 2
-# Kita ubah jadi: x = (x + 4/x) / 2  -> ini pasti konvergen
-g <- function(x) {
-  return((x + 4 / x) / 2)
-}
+# CONTOH: x^2 - 4 = 0
+f <- function(x) { return(x^2 - 4) }
+df <- function(x) { return(2 * x) }
 
-hasil <- fixed_point(g, 1.5)
-
+hasil <- newton_raphson(f, df, 1.5)
 if (!is.null(hasil) && hasil$konvergen) {
   cat(sprintf("\nAkar ditemukan: %.6f dalam %d iterasi\n", hasil$akar, hasil$iterasi))
 }
