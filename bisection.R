@@ -1,53 +1,51 @@
-bisection <- function(f, a, b, tol = 1e-5, max_iter = 100) {
-  fa <- f(a)
-  fb <- f(b)
+fixed_point <- function(g, x0, tol = 1e-5, max_iter = 100) {
+  x_lama <- x0
   
-  # 1. Kalau ujungnya udah akar
-  if (fa == 0) {
-    return(list(akar = a, iterasi = 0))
-  }
-  if (fb == 0) {
-    return(list(akar = b, iterasi = 0))
-  }
-  
-  # 2. Syarat biseksi: harus beda tanda
-  if (fa * fb > 0) {
-    cat("Syarat tidak terpenuhi: f(a) dan f(b) harus beda tanda!\n")
+  # Cek awal: x0 harus angka yang valid
+  if (!is.finite(x_lama)) {
+    cat("Error: x0 tidak valid!\n")
     return(NULL)
   }
   
-  cat(sprintf("%-6s %-12s %-12s %-12s %-12s\n", "Iter", "a", "b", "x", "f(x)"))
-  cat("-------------------------------------------------------\n")
+  cat(sprintf("%-6s %-15s %-15s\n", "Iter", "x_baru", "|selisih|"))
+  cat("------------------------------------------\n")
   
   for (i in 1:max_iter) {
-    x <- (a + b) / 2
-    fx <- f(x)
+    x_baru <- g(x_lama)
     
-    cat(sprintf("%-6d %-12.6f %-12.6f %-12.6f %-12.6f\n", i, a, b, x, fx))
-    
-    # 3. Berhenti kalau sudah cukup dekat
-    if (abs(fx) < tol || (b - a) / 2 < tol) {
-      return(list(akar = x, iterasi = i))
+    # Pengaman: kalau g(x) error / Inf / NA langsung berhenti
+    if (!is.finite(x_baru)) {
+      cat(sprintf("Berhenti di iterasi %d: g(x) = %s (tidak valid)\n", i, x_baru))
+      return(NULL)
     }
     
-    # 4. Persempit selang
-    if (fa * fx < 0) {
-      b <- x
-      fb <- fx
-    } else {
-      a <- x
-      fa <- fx
+    selisih <- abs(x_baru - x_lama)
+    cat(sprintf("%-6d %-15.6f %-15.6f\n", i, x_baru, selisih))
+    
+    # Kriteria berhenti yang benar
+    if (selisih < tol) {
+      cat("------------------------------------------\n")
+      return(list(akar = x_baru, iterasi = i, konvergen = TRUE))
     }
+    
+    x_lama <- x_baru
   }
   
-  cat("Mencapai batas iterasi maksimum!\n")
-  return(list(akar = (a + b) / 2, iterasi = max_iter))
+  cat("------------------------------------------\n")
+  cat("PERINGATAN: Maksimum iterasi tercapai, TIDAK konvergen!\n")
+  cat("Cek lagi g(x) kamu, syaratnya |g'(x)| < 1 di dekat akar.\n")
+  return(list(akar = x_lama, iterasi = max_iter, konvergen = FALSE))
 }
 
-# === CONTOH PENGGUNAAN ===
-f <- function(x) {
-  return(x^2 - 4)
+# === CONTOH YANG BENAR DAN PASTI KONVERGEN ===
+# Soal: x^2 - 4 = 0, akar = 2
+# Kita ubah jadi: x = (x + 4/x) / 2  -> ini pasti konvergen
+g <- function(x) {
+  return((x + 4 / x) / 2)
 }
 
-hasil <- bisection(f, 1, 3)
-cat(sprintf("\nAkar ditemukan: %.6f dalam %d iterasi\n", hasil$akar, hasil$iterasi))
+hasil <- fixed_point(g, 1.5)
+
+if (!is.null(hasil) && hasil$konvergen) {
+  cat(sprintf("\nAkar ditemukan: %.6f dalam %d iterasi\n", hasil$akar, hasil$iterasi))
+}
